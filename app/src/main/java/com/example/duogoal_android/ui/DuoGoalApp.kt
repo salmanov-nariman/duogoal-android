@@ -3,7 +3,9 @@ package com.example.duogoal_android.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -13,7 +15,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.duogoal_android.ui.components.DuoBottomNav
@@ -33,7 +34,7 @@ import com.example.duogoal_android.ui.screens.ProfileScreen
 import com.example.duogoal_android.ui.theme.DuoGoalTheme
 import com.example.duogoal_android.ui.theme.DuoTheme
 
-/** Все страницы приложения. Логики пока нет — только переходы между экранами. */
+/** Маршруты: авторизация подключена к API, остальные данные пока демонстрационные. */
 enum class DuoScreen {
     Login, Feed, Chats, Chat, Profile, Notifications,
     CreateGoal, PartnerPicker, GoalActive, GoalWaiting, Invitation,
@@ -78,14 +79,14 @@ fun DuoGoalApp() {
         }
         val showBottomNav = current in listOf(DuoScreen.Feed, DuoScreen.Chats, DuoScreen.Profile)
 
-        Box(
+        Column(
             Modifier
                 .fillMaxSize()
                 .background(DuoTheme.colors.bg)
                 .statusBarsPadding()
                 .navigationBarsPadding(),
         ) {
-            Box(Modifier.fillMaxSize().padding(bottom = if (showBottomNav) 66.dp else 0.dp)) {
+            Box(Modifier.weight(1f).fillMaxWidth()) {
                 when (current) {
                     DuoScreen.Login -> AuthScreen(authState, authViewModel::setMode, authViewModel::updateUsername, authViewModel::updateEmail, authViewModel::updatePassword, authViewModel::submit)
                     DuoScreen.Feed -> FeedScreen(onOpenNotifications = { push(DuoScreen.Notifications) })
@@ -112,7 +113,7 @@ fun DuoGoalApp() {
                         onBack = ::pop,
                         onSendRequest = { push(DuoScreen.GoalWaiting) },
                     )
-                    DuoScreen.GoalActive -> GoalActiveScreen(onBack = ::pop)
+                    DuoScreen.GoalActive -> GoalActiveScreen(onBack = ::pop, onOpenChat = { push(DuoScreen.Chat) })
                     DuoScreen.GoalWaiting -> GoalWaitingScreen(onBack = ::pop)
                     DuoScreen.Invitation -> InvitationScreen(
                         onBack = ::pop,
@@ -129,7 +130,7 @@ fun DuoGoalApp() {
                         else -> DuoTab.Feed
                     },
                     onSelect = ::switchTab,
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp),
+                    modifier = Modifier.padding(top = 6.dp, bottom = 10.dp),
                 )
             }
         }

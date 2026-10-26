@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -43,7 +45,7 @@ fun InvitationScreen(
     val c = DuoTheme.colors
     Column(Modifier.fillMaxSize().background(c.bg)) {
         ScreenTopBar("Приглашение", onBack = onBack)
-        Column(Modifier.weight(1f).padding(start = 20.dp, end = 20.dp, top = 2.dp)) {
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(start = 24.dp, end = 24.dp, top = 12.dp)) {
             Column(
                 Modifier.fillMaxWidth().padding(top = 22.dp, bottom = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -64,7 +66,7 @@ fun InvitationScreen(
                     }
                 }
                 DuoText(
-                    "Аня зовёт тебя в напарники", 20, c.fg, FontWeight.Bold,
+                    "Аня зовёт тебя\nв напарники", 28, c.fg, FontWeight.SemiBold,
                     letterSpacing = -0.01, modifier = Modifier.widthIn(max = 280.dp),
                 )
                 DuoText(
@@ -78,9 +80,9 @@ fun InvitationScreen(
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(18.dp))
+                    .clip(RoundedCornerShape(24.dp))
                     .background(c.surface)
-                    .border(1.dp, c.border, RoundedCornerShape(18.dp))
+                    .border(1.dp, c.border, RoundedCornerShape(24.dp))
                     .padding(18.dp),
             ) {
                 DuoText(
@@ -120,8 +122,9 @@ fun InvitationScreen(
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF07080A, heightDp = 852, widthDp = 392)
+@Preview(name = "Приглашение · светлая", heightDp = 852, widthDp = 392)
+@Preview(name = "Приглашение · тёмная", heightDp = 852, widthDp = 392, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun InvitationPreviewDark() {
-    DuoGoalTheme(darkTheme = true) { InvitationScreen() }
+    DuoGoalTheme { InvitationScreen() }
 }

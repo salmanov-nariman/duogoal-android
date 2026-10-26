@@ -10,16 +10,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -37,7 +38,7 @@ fun ChatScreen(onBack: () -> Unit = {}) {
     Column(Modifier.fillMaxSize().background(c.bg)) {
         // Шапка чата
         Row(
-            Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 8.dp),
+            Modifier.fillMaxWidth().heightIn(min = 76.dp).padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -50,15 +51,8 @@ fun ChatScreen(onBack: () -> Unit = {}) {
             Avatar("МК", c.avatar3, 38.dp, 14)
             Column(Modifier.weight(1f)) {
                 DuoText("Миша Ковалёв", 15, c.fg, FontWeight.SemiBold)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    DuoText("Английский каждый день", 12, c.fgMuted)
-                    Box(
-                        Modifier.clip(RoundedCornerShape(999.dp)).background(c.accentSoft)
-                            .padding(horizontal = 7.dp, vertical = 1.dp),
-                    ) {
-                        DuoText("стрик 6", 11, c.accent, FontWeight.SemiBold)
-                    }
-                }
+                DuoText("Английский каждый день", 12, c.fgMuted, maxLines = 1)
+                DuoText("6 дней вместе", 11, c.accentFg, modifier = Modifier.padding(top = 3.dp))
             }
             Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
                 DuoIcon(DuoIcons.MoreHorizontal, c.fgMuted, 20.dp)
@@ -68,7 +62,7 @@ fun ChatScreen(onBack: () -> Unit = {}) {
 
         // Сообщения
         Column(
-            Modifier.weight(1f).padding(top = 14.dp),
+            Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             DuoText(
@@ -92,7 +86,7 @@ fun ChatScreen(onBack: () -> Unit = {}) {
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     DuoText(
-                        "ОТЧЁТ · ДЕНЬ 6", 11, c.accent, FontWeight.SemiBold,
+                        "ОТЧЁТ · ДЕНЬ 6", 11, c.accentFg, FontWeight.SemiBold,
                         letterSpacing = 0.04, modifier = Modifier.weight(1f),
                     )
                     DuoText("14:02", 10, c.fgMuted)
@@ -102,15 +96,10 @@ fun ChatScreen(onBack: () -> Unit = {}) {
                         .fillMaxWidth()
                         .height(96.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(
-                            Brush.linearGradient(
-                                if (c.isDark) listOf(Color(0xFF2A2F3A), Color(0xFF171A20))
-                                else listOf(Color(0xFFE3E0D8), Color(0xFFCFCBC0))
-                            )
-                        ),
+                        .background(c.accentSoft),
                     contentAlignment = Alignment.Center,
                 ) {
-                    DuoIcon(DuoIcons.Camera, if (c.isDark) Color(0xFF4A4F5A) else Color(0xFF9A968A), 24.dp)
+                    DuoIcon(DuoIcons.Camera, c.accentFg, 24.dp)
                 }
                 DuoText("30 минут грамматики — добил Past Perfect.", 14, c.fg, lineHeight = 1.45)
             }
@@ -125,9 +114,9 @@ fun ChatScreen(onBack: () -> Unit = {}) {
                         .background(c.accent)
                         .padding(horizontal = 14.dp, vertical = 10.dp),
                 ) {
-                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         DuoText("Сильно! Я сяду вечером после работы", 14, c.onAccent, lineHeight = 1.4)
-                        DuoText("14:05", 10, c.onAccent.copy(alpha = 0.7f))
+                        DuoText("14:05", 11, c.onAccent, modifier = Modifier.align(Alignment.End))
                     }
                 }
             }
@@ -145,9 +134,9 @@ fun ChatScreen(onBack: () -> Unit = {}) {
                         )
                         .padding(horizontal = 14.dp, vertical = 10.dp),
                 ) {
-                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         DuoText("Договорились, жду твой отчёт до 21:00", 14, c.fg, lineHeight = 1.4)
-                        DuoText("14:06", 10, c.fgMuted)
+                        DuoText("14:06", 11, c.fgMuted, modifier = Modifier.align(Alignment.End))
                     }
                 }
             }
@@ -162,14 +151,14 @@ fun ChatScreen(onBack: () -> Unit = {}) {
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .height(40.dp)
+                    .heightIn(min = 48.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(c.accentSoft),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                DuoIcon(DuoIcons.Camera, c.accent, 16.dp)
-                DuoText("Отправить отчёт за сегодня", 14, c.accent, FontWeight.SemiBold)
+                DuoIcon(DuoIcons.Camera, c.accentFg, 16.dp)
+                DuoText("Отправить отчёт за сегодня", 14, c.accentFg, FontWeight.SemiBold, modifier = Modifier.padding(vertical = 10.dp))
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(
@@ -195,8 +184,9 @@ fun ChatScreen(onBack: () -> Unit = {}) {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF07080A, heightDp = 852, widthDp = 392)
+@Preview(name = "Чат · светлая", heightDp = 852, widthDp = 392)
+@Preview(name = "Чат · тёмная", heightDp = 852, widthDp = 392, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun ChatPreviewDark() {
-    DuoGoalTheme(darkTheme = true) { ChatScreen() }
+    DuoGoalTheme { ChatScreen() }
 }

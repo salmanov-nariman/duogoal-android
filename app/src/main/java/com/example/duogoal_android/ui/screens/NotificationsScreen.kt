@@ -48,7 +48,7 @@ fun NotificationsScreen(
 
             NotificationRow(
                 iconBg = c.accentSoft,
-                icon = { DuoIcon(DuoIcons.Bell, c.accent, 18.dp) },
+                icon = { DuoIcon(DuoIcons.Bell, c.accentFg, 18.dp) },
                 title = "Не забудь отчитаться",
                 subtitle = "Английский каждый день · до 21:00",
                 time = "18:00",
@@ -167,8 +167,9 @@ private fun NotificationRow(
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF07080A, heightDp = 852, widthDp = 392)
+@Preview(name = "Уведомления · светлая", heightDp = 852, widthDp = 392)
+@Preview(name = "Уведомления · тёмная", heightDp = 852, widthDp = 392, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun NotificationsPreviewDark() {
-    DuoGoalTheme(darkTheme = true) { NotificationsScreen() }
+    DuoGoalTheme { NotificationsScreen() }
 }

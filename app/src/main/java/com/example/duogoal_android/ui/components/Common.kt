@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -16,9 +17,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -26,6 +31,11 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -65,8 +75,9 @@ fun DuoText(
             fontSize = size.sp,
             color = color,
             fontWeight = weight,
+            fontFamily = FontFamily.SansSerif,
             letterSpacing = letterSpacing.em,
-            lineHeight = lineHeight?.em ?: TextStyle.Default.lineHeight,
+            lineHeight = (lineHeight ?: 1.4).em,
         ),
         maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
@@ -88,7 +99,7 @@ fun Avatar(
     var m = modifier.size(size).clip(CircleShape).background(color)
     if (ringColor != null) m = m.border(ringWidth, ringColor, CircleShape)
     Box(m, contentAlignment = Alignment.Center) {
-        DuoText(initials, fontSize, Color.White, FontWeight.SemiBold)
+        DuoText(initials, fontSize, DuoTheme.colors.avatarInk, FontWeight.SemiBold)
     }
 }
 
@@ -125,24 +136,32 @@ fun PrimaryButton(
     modifier: Modifier = Modifier,
     height: Dp = 52.dp,
     icon: ImageVector? = null,
+    enabled: Boolean = true,
+    loading: Boolean = false,
     onClick: () -> Unit = {},
 ) {
     val c = DuoTheme.colors
     Row(
         modifier
             .fillMaxWidth()
-            .height(height)
+            .heightIn(min = height)
+            .shadow(if (enabled) 6.dp else 0.dp, RoundedCornerShape(14.dp), ambientColor = c.accent.copy(alpha = 0.18f), spotColor = c.accent.copy(alpha = 0.18f))
             .clip(RoundedCornerShape(14.dp))
-            .background(c.accent)
-            .clickable(onClick = onClick),
+            .background(if (enabled) c.accent else c.accent.copy(alpha = 0.55f))
+            .clickable(enabled = enabled && !loading, role = Role.Button, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (icon != null) {
-            DuoIcon(icon, c.onAccent, 18.dp)
-            Box(Modifier.size(8.dp))
+        if (loading) {
+            DuoText("Подождите…", 15, c.onAccent, FontWeight.SemiBold)
+        } else {
+            if (icon != null) {
+                DuoIcon(icon, c.onAccent, 18.dp)
+                Box(Modifier.size(8.dp))
+            }
+            DuoText(text, 15, c.onAccent, FontWeight.SemiBold)
         }
-        DuoText(text, 16, c.onAccent, FontWeight.SemiBold)
     }
 }
 
@@ -159,11 +178,12 @@ fun SecondaryButton(
     Row(
         modifier
             .fillMaxWidth()
-            .height(height)
-            .clip(RoundedCornerShape(12.dp))
+            .heightIn(min = height)
+            .clip(RoundedCornerShape(14.dp))
             .background(c.surfaceInput)
-            .border(1.dp, c.border, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick),
+            .border(1.dp, c.border, RoundedCornerShape(14.dp))
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -184,21 +204,22 @@ fun ScreenTopBar(
 ) {
     val c = DuoTheme.colors
     Row(
-        Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 8.dp),
+        Modifier.fillMaxWidth().heightIn(min = 68.dp).padding(horizontal = 20.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (onBack != null) {
             Box(
-                Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onBack),
+                Modifier.size(48.dp).clip(CircleShape).background(c.surface).border(1.dp, c.border, CircleShape)
+                    .semantics { contentDescription = "Назад" }.clickable(role = Role.Button, onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
-                DuoIcon(DuoIcons.ArrowLeft, c.fg, 22.dp)
+                DuoIcon(DuoIcons.ArrowLeft, c.fg, 20.dp)
             }
         }
         DuoText(
             title, 17, c.fg, FontWeight.SemiBold,
             letterSpacing = -0.01,
-            modifier = Modifier.weight(1f).padding(start = if (onBack == null) 12.dp else 0.dp),
+            modifier = Modifier.weight(1f).padding(horizontal = 14.dp),
         )
         trailing?.invoke()
     }
@@ -209,7 +230,8 @@ fun ScreenTopBar(
 fun BellWithDot(onClick: () -> Unit = {}) {
     val c = DuoTheme.colors
     Box(
-        Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onClick),
+        Modifier.size(48.dp).clip(CircleShape).background(c.surface).border(1.dp, c.border, CircleShape)
+            .semantics { contentDescription = "Уведомления" }.clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         DuoIcon(DuoIcons.Bell, c.fg, 21.dp)
@@ -238,30 +260,47 @@ fun DuoBottomNav(
         modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
-            .height(60.dp)
+            .shadow(12.dp, RoundedCornerShape(24.dp), ambientColor = c.fg.copy(alpha = 0.06f), spotColor = c.fg.copy(alpha = 0.06f))
+            .heightIn(min = 68.dp)
             .clip(RoundedCornerShape(22.dp))
             .background(c.navBg)
             .border(1.dp, c.navBorder, RoundedCornerShape(22.dp)),
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        NavItem(DuoIcons.Home, "Лента", selected == DuoTab.Feed) { onSelect(DuoTab.Feed) }
-        NavItem(DuoIcons.Chat, "Чаты", selected == DuoTab.Chats) { onSelect(DuoTab.Chats) }
-        NavItem(DuoIcons.User, "Профиль", selected == DuoTab.Profile) { onSelect(DuoTab.Profile) }
+        NavItem(DuoIcons.Home, "Лента", selected == DuoTab.Feed, Modifier.weight(1f)) { onSelect(DuoTab.Feed) }
+        NavItem(DuoIcons.Chat, "Чаты", selected == DuoTab.Chats, Modifier.weight(1f)) { onSelect(DuoTab.Chats) }
+        NavItem(DuoIcons.User, "Профиль", selected == DuoTab.Profile, Modifier.weight(1f)) { onSelect(DuoTab.Profile) }
     }
 }
 
 @Composable
-private fun NavItem(icon: ImageVector, label: String, active: Boolean, onClick: () -> Unit) {
+private fun NavItem(icon: ImageVector, label: String, active: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val c = DuoTheme.colors
-    val tint = if (active) c.fg else c.fgSubtle
+    val tint = if (active) c.accentFg else c.fgMuted
+    val selection by animateFloatAsState(if (active) 1f else 0f, label = "nav-selection")
     Column(
-        Modifier.size(width = 96.dp, height = 60.dp).clickable(onClick = onClick),
+        modifier.heightIn(min = 68.dp).semantics { selected = active }.clickable(role = Role.Tab, onClick = onClick).padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        DuoIcon(icon, tint, 21.dp)
+        Box(Modifier.clip(RoundedCornerShape(12.dp)).background(c.accentSoft.copy(alpha = selection)).padding(horizontal = 18.dp, vertical = 4.dp)) {
+            DuoIcon(icon, tint, 20.dp)
+        }
         Box(Modifier.height(4.dp))
         DuoText(label, 11, tint, if (active) FontWeight.SemiBold else FontWeight.Medium)
+    }
+}
+
+/** Знак «два человека — общий путь» из согласованного макета. */
+@Composable
+fun DuoBrand(modifier: Modifier = Modifier) {
+    val c = DuoTheme.colors
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.size(30.dp, 28.dp)) {
+            Box(Modifier.align(Alignment.CenterStart).size(18.dp, 24.dp).rotate(-25f).border(2.5.dp, c.accentFg, RoundedCornerShape(10.dp)))
+            Box(Modifier.align(Alignment.CenterEnd).size(18.dp, 24.dp).rotate(25f).border(2.5.dp, c.accentFg, RoundedCornerShape(10.dp)))
+        }
+        DuoText("DuoGoal", 19, c.fg, FontWeight.SemiBold, letterSpacing = -0.035)
     }
 }
