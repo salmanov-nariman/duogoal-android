@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -22,7 +25,8 @@ import com.example.duogoal_android.ui.screens.FeedScreen
 import com.example.duogoal_android.ui.screens.GoalActiveScreen
 import com.example.duogoal_android.ui.screens.GoalWaitingScreen
 import com.example.duogoal_android.ui.screens.InvitationScreen
-import com.example.duogoal_android.ui.screens.LoginScreen
+import com.example.duogoal_android.ui.screens.AuthScreen
+import com.example.duogoal_android.ui.auth.AuthViewModel
 import com.example.duogoal_android.ui.screens.NotificationsScreen
 import com.example.duogoal_android.ui.screens.PartnerPickerScreen
 import com.example.duogoal_android.ui.screens.ProfileScreen
@@ -42,6 +46,8 @@ enum class DuoScreen {
 @Composable
 fun DuoGoalApp() {
     DuoGoalTheme {
+        val authViewModel: AuthViewModel = viewModel()
+        val authState = authViewModel.state.collectAsState().value
         val backStack = remember { mutableStateListOf(DuoScreen.Login) }
         val current = backStack.last()
 
@@ -67,6 +73,9 @@ fun DuoGoalApp() {
 
         BackHandler(enabled = backStack.size > 1) { pop() }
 
+        LaunchedEffect(authState.authenticated) {
+            if (authState.authenticated && current == DuoScreen.Login) switchTab(DuoTab.Feed)
+        }
         val showBottomNav = current in listOf(DuoScreen.Feed, DuoScreen.Chats, DuoScreen.Profile)
 
         Box(
@@ -78,7 +87,7 @@ fun DuoGoalApp() {
         ) {
             Box(Modifier.fillMaxSize().padding(bottom = if (showBottomNav) 66.dp else 0.dp)) {
                 when (current) {
-                    DuoScreen.Login -> LoginScreen(onLogin = { switchTab(DuoTab.Feed) })
+                    DuoScreen.Login -> AuthScreen(authState, authViewModel::setMode, authViewModel::updateUsername, authViewModel::updateEmail, authViewModel::updatePassword, authViewModel::submit)
                     DuoScreen.Feed -> FeedScreen(onOpenNotifications = { push(DuoScreen.Notifications) })
                     DuoScreen.Chats -> ChatsScreen(
                         onOpenChat = { push(DuoScreen.Chat) },
