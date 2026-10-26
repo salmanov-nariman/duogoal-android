@@ -28,6 +28,8 @@ import com.example.duogoal_android.ui.components.DuoText
 import com.example.duogoal_android.ui.components.GoalProgressRing
 import com.example.duogoal_android.ui.components.PrimaryButton
 import com.example.duogoal_android.ui.components.StatusChip
+import com.example.duogoal_android.ui.components.SecondaryButton
+import androidx.compose.ui.platform.testTag
 import com.example.duogoal_android.ui.theme.DuoGoalTheme
 import com.example.duogoal_android.ui.theme.DuoTheme
 
@@ -35,6 +37,7 @@ import com.example.duogoal_android.ui.theme.DuoTheme
 fun ProfileScreen(
     onOpenNotifications: () -> Unit = {}, onOpenActiveGoal: () -> Unit = {},
     onOpenWaitingGoal: () -> Unit = {}, onCreateGoal: () -> Unit = {},
+    onLogout: (() -> Unit)? = null,
 ) {
     val c = DuoTheme.colors
     Column(Modifier.fillMaxSize().background(c.bg).verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
@@ -76,6 +79,9 @@ fun ProfileScreen(
         GoalCard("Читать 20 минут в день", "30 дней для новых историй", "Ищем напарника", c.accentSoft, c.accentFg)
         GoalCard("Испанский с нуля", "С Леной · 30 из 30 дней", "Завершена", c.successSoft, c.success)
         PrimaryButton("Создать новую цель", icon = DuoIcons.Plus, onClick = onCreateGoal)
+        if (onLogout != null) {
+            SecondaryButton("Выйти из аккаунта", Modifier.testTag("profile-logout"), onClick = onLogout)
+        }
     }
 }
 

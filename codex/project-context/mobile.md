@@ -7,17 +7,19 @@
 - Kotlin, Jetpack Compose; минимальная версия Android — API 24.
 - Пакет: `com.example.duogoal_android`.
 - Исходный дизайн-прототип: `design-pages`; авторизация: `feature/android-auth`; согласованный дизайн: `feature/duogoal-design-system`.
-- Единственная activity — `MainActivity`; она отображает `DuoGoalApp`.
+- Основная activity — `MainActivity`; она отображает `DuoGoalApp`. `DuoGoalApplication` хранит единый репозиторий сессии на процесс.
 
 ## Текущая структура кода
 
 ```text
 app/src/main/java/com/example/duogoal_android/
 ├── MainActivity.kt
-├── data/auth/AuthRepository.kt # HTTP auth, DataStore и шифрование токенов
+├── DuoGoalApplication.kt      # зависимости и scope сессии на процесс
+├── data/auth/                 # репозиторий сессии, API и шифрованное хранилище
 └── ui/
     ├── auth/AuthViewModel.kt   # состояния формы и сессии
-    ├── DuoGoalApp.kt          # временный ручной back stack и маршруты экранов
+    ├── DuoGoalApp.kt          # SessionGate: восстановление/вход/выход и приватный UI
+    ├── navigation/            # Navigation Compose, маршруты, сохранение back stack
     ├── components/            # бренд, карточки, прогресс пары, кнопки, иконки и навигация
     ├── screens/               # Compose-экраны
     └── theme/                 # цветовая тема и типографика
@@ -27,9 +29,9 @@ app/src/main/java/com/example/duogoal_android/
 
 ## Что является макетом, а не реализованной функциональностью
 
-- `AuthScreen` содержит рабочие формы входа и регистрации; после регистрации выполняется вход. `AuthRepository` использует `https://hlt.com/api/auth`, шифрует токены ключом Android Keystore и хранит в DataStore.
-- `AuthViewModel` управляет формой и восстановлением сессии через refresh. Реальная интеграционная проверка с backend отложена по решению пользователя до его запуска.
-- Навигация реализована локальным списком экранов в `DuoGoalApp`, а не Navigation Compose.
+- `AuthScreen` содержит рабочие формы входа и регистрации; после регистрации выполняется вход. `HttpAuthApi` использует `https://hlt.com/api/auth`; `EncryptedSessionStore` шифрует токены ключом Android Keystore и хранит в DataStore.
+- `AuthRepository` управляет сессией, refresh, локальным выходом и конкурирующими запросами. `AuthViewModel` управляет только формой. Реальная интеграционная проверка с backend отложена по решению пользователя до его запуска.
+- Приватная навигация реализована через Navigation Compose; текущий экран и back stack восстанавливаются. Детали и сценарии — в `navigation-and-session.md`.
 - Контент ленты, профиля, чатов, целей и уведомлений статичен.
 - Для остальных разделов сетевого слоя пока нет. Все цели, профили, чаты, отчёты и уведомления остаются демонстрационными.
 - `app/src/debug/` — изолированная `DesignPreviewActivity` для просмотра всех экранов без backend. В release её нет.
