@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -44,14 +46,15 @@ fun CreateGoalScreen(
             Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
+            DuoText("Начни с маленького шага.", 24, c.fg, FontWeight.SemiBold, letterSpacing = -0.03)
             FormField("Название") {
                 StaticInput(text = "Английский каждый день")
             }
             FormField("Категория") {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     CategoryChip("Языки", selected = true)
                     CategoryChip("Спорт", selected = false)
                     CategoryChip("Учёба", selected = false)
@@ -59,15 +62,15 @@ fun CreateGoalScreen(
                 }
             }
             FormField("Теги") {
-                Row(
+                FlowRow(
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(13.dp))
                         .background(c.surfaceInput)
-                        .border(1.5.dp, c.accent, RoundedCornerShape(13.dp))
+                        .border(1.dp, c.borderStrong, RoundedCornerShape(13.dp))
                         .padding(horizontal = 12.dp, vertical = 9.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     TagChip("разговор")
                     TagChip("грамматика")
@@ -75,11 +78,11 @@ fun CreateGoalScreen(
                 }
             }
             FormField("Длительность") {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    DurationChip("7 дней", selected = false, Modifier.weight(1f))
-                    DurationChip("14 дней", selected = true, Modifier.weight(1f))
-                    DurationChip("21 день", selected = false, Modifier.weight(1f))
-                    DurationChip("30 дней", selected = false, Modifier.weight(1f))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    DurationChip("7 дней", selected = false)
+                    DurationChip("14 дней", selected = true)
+                    DurationChip("21 день", selected = false)
+                    DurationChip("30 дней", selected = false)
                 }
             }
             FormField("Дедлайн отчёта") {
@@ -130,14 +133,14 @@ private fun CategoryChip(text: String, selected: Boolean) {
     val c = DuoTheme.colors
     Box(
         Modifier
-            .height(34.dp)
+            .heightIn(min = 40.dp)
             .clip(RoundedCornerShape(999.dp))
             .background(if (selected) c.accentSoft else c.surfaceInput)
-            .border(1.dp, if (selected) c.accent else c.borderStrong, RoundedCornerShape(999.dp))
-            .padding(horizontal = 14.dp),
+            .border(1.dp, if (selected) c.accentFg else c.borderStrong, RoundedCornerShape(999.dp))
+            .padding(horizontal = 14.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        DuoText(text, 13, if (selected) c.accent else c.fgMuted, FontWeight.Medium)
+        DuoText(text, 13, if (selected) c.accentFg else c.fgMuted, FontWeight.Medium)
     }
 }
 
@@ -163,22 +166,24 @@ private fun DurationChip(text: String, selected: Boolean, modifier: Modifier = M
     val c = DuoTheme.colors
     Box(
         modifier
-            .height(38.dp)
+            .heightIn(min = 44.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(if (selected) c.accentSoft else c.surfaceInput)
-            .border(1.dp, if (selected) c.accent else c.borderStrong, RoundedCornerShape(10.dp)),
+            .border(1.dp, if (selected) c.accentFg else c.borderStrong, RoundedCornerShape(10.dp))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
         DuoText(
             text, 13,
-            if (selected) c.accent else c.fgMuted,
+            if (selected) c.accentFg else c.fgMuted,
             if (selected) FontWeight.SemiBold else FontWeight.Medium,
         )
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF07080A, heightDp = 852, widthDp = 392)
+@Preview(name = "Создание · светлая", heightDp = 852, widthDp = 392)
+@Preview(name = "Создание · тёмная", heightDp = 852, widthDp = 392, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun CreateGoalPreviewDark() {
-    DuoGoalTheme(darkTheme = true) { CreateGoalScreen() }
+    DuoGoalTheme { CreateGoalScreen() }
 }

@@ -54,6 +54,11 @@ private fun circlePath(cx: Float, cy: Float, r: Float): String =
     "M ${cx - r},$cy a $r,$r 0 1,0 ${2 * r},0 a $r,$r 0 1,0 ${-2 * r},0"
 
 object DuoIcons {
+    val ArrowRight = strokeIcon("arrow-right", "M5 12h14", "m12 5 7 7-7 7")
+    val Sparkles = strokeIcon("sparkles", "m12 3 2.7 6.3L21 12l-6.3 2.7L12 21l-2.7-6.3L3 12l6.3-2.7Z", "M20 2v4", "M18 4h4")
+    val Footprints = strokeIcon("footprints", "M6 3c-2 0-3 3-3 5s1 3 3 3 3-1 3-3-1-5-3-5Z", "M5 14h2v3H5Z", "M17 8c-2 0-3 3-3 5s1 3 3 3 3-1 3-3-1-5-3-5Z", "M16 19h2v3h-2Z")
+    val AlertCircle = strokeIcon("alert-circle", circlePath(12f, 12f, 9f), "M12 8v4", "M12 16h.01")
+    val EyeOff = strokeIcon("eye-off", "M3 3l18 18", "M10.6 10.6a2 2 0 0 0 2.8 2.8", "M9.5 5.3A11 11 0 0 1 12 5c7 0 10 7 10 7a17 17 0 0 1-3 4", "M6 6a20 20 0 0 0-4 6s3 7 10 7a12 12 0 0 0 5-1")
     val ArrowLeft = strokeIcon("arrow-left", "m12 19-7-7 7-7", "M19 12H5")
 
     val Bell = strokeIcon(

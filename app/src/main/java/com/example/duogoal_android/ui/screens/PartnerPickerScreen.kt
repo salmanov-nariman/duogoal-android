@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -41,7 +43,8 @@ fun PartnerPickerScreen(
     val c = DuoTheme.colors
     Column(Modifier.fillMaxSize().background(c.bg)) {
         ScreenTopBar("Выбор напарника", onBack = onBack)
-        Column(Modifier.weight(1f).padding(start = 16.dp, end = 16.dp, top = 2.dp)) {
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(start = 24.dp, end = 24.dp, top = 12.dp)) {
+            DuoText("Найди своего человека.", 24, c.fg, androidx.compose.ui.text.font.FontWeight.SemiBold, letterSpacing = -0.03, modifier = Modifier.padding(bottom = 20.dp))
             // Поиск
             Row(
                 Modifier
@@ -94,12 +97,12 @@ private fun PartnerRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(24.dp))
             .background(c.surface)
             .border(
                 if (selected) 1.5.dp else 1.dp,
-                if (selected) c.accent else c.border,
-                RoundedCornerShape(16.dp),
+                if (selected) c.accentFg else c.border,
+                RoundedCornerShape(24.dp),
             )
             .clickable {}
             .padding(horizontal = 15.dp, vertical = 13.dp),
@@ -115,18 +118,19 @@ private fun PartnerRow(
             Modifier
                 .size(20.dp)
                 .clip(CircleShape)
-                .border(2.dp, if (selected) c.accent else c.borderStrong, CircleShape),
+                .border(2.dp, if (selected) c.accentFg else c.borderStrong, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             if (selected) {
-                Box(Modifier.size(10.dp).clip(CircleShape).background(c.accent))
+                Box(Modifier.size(10.dp).clip(CircleShape).background(c.accentFg))
             }
         }
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF07080A, heightDp = 852, widthDp = 392)
+@Preview(name = "Напарник · светлая", heightDp = 852, widthDp = 392)
+@Preview(name = "Напарник · тёмная", heightDp = 852, widthDp = 392, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun PartnerPickerPreviewDark() {
-    DuoGoalTheme(darkTheme = true) { PartnerPickerScreen() }
+    DuoGoalTheme { PartnerPickerScreen() }
 }

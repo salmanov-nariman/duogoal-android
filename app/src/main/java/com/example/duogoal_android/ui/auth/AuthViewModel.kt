@@ -24,6 +24,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     fun submit() {
         val current = state.value
+        if (current.loading) return
         val error = when { current.email.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(current.email).matches() -> "Введите корректный email"; current.password.isBlank() -> "Введите пароль"; current.mode == AuthMode.Register && current.username.trim().isBlank() -> "Введите имя пользователя"; else -> null }
         if (error != null) { state.value = current.copy(error = error); return }
         state.value = current.copy(loading = true, error = null)
