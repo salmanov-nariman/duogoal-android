@@ -61,12 +61,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.duogoal_android.ui.auth.AuthMode
+import com.example.duogoal_android.ui.auth.AuthRequest
 import com.example.duogoal_android.ui.auth.AuthUiState
 import com.example.duogoal_android.ui.components.DuoBrand
 import com.example.duogoal_android.ui.components.DuoIcon
 import com.example.duogoal_android.ui.components.DuoIcons
 import com.example.duogoal_android.ui.components.DuoText
 import com.example.duogoal_android.ui.components.PrimaryButton
+import com.example.duogoal_android.ui.components.SecondaryButton
 import com.example.duogoal_android.ui.theme.DuoGoalTheme
 import com.example.duogoal_android.ui.theme.DuoTheme
 
@@ -78,6 +80,8 @@ fun AuthScreen(
     onEmail: (String) -> Unit,
     onPassword: (String) -> Unit,
     onSubmit: () -> Unit,
+    onCode: (String) -> Unit,
+    onResend: () -> Unit,
 ) {
     val c = DuoTheme.colors
     val focusManager = LocalFocusManager.current
@@ -89,8 +93,18 @@ fun AuthScreen(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 26.dp, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column(Modifier.widthIn(max = 440.dp).fillMaxWidth()) {
+            Column(Modifier.widthIn(max = 440.dp).fillMaxWidth()) authContent@{
                 DuoBrand()
+                if (state.mode == AuthMode.VerifyEmail) {
+                    EmailVerificationForm(
+                        state = state,
+                        onCode = onCode,
+                        onSubmit = submit,
+                        onResend = { focusManager.clearFocus(); onResend() },
+                        onBack = { onMode(AuthMode.Login) },
+                    )
+                    return@authContent
+                }
                 TogetherIllustration(Modifier.fillMaxWidth().height(if (compact) 100.dp else 160.dp))
                 DuoText("Твоя цель.\nВаш путь.", if (compact) 32 else 38, c.fg, FontWeight.SemiBold, letterSpacing = -0.045, lineHeight = 1.08)
                 DuoText(
@@ -111,16 +125,7 @@ fun AuthScreen(
                     }
                     AuthField("Email", "you@example.com", state.email, onEmail, DuoIcons.Mail, "auth-email", enabled = !state.loading, keyboardType = KeyboardType.Email)
                     AuthField("Пароль", "Твой пароль", state.password, onPassword, DuoIcons.Lock, "auth-password", enabled = !state.loading, password = true, onDone = submit)
-                    state.error?.let { message ->
-                        Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(c.danger.copy(alpha = 0.09f))
-                                .semantics { error(message); liveRegion = LiveRegionMode.Polite }.padding(14.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            DuoIcon(DuoIcons.AlertCircle, c.danger, 18.dp)
-                            DuoText(message, 13, c.danger, modifier = Modifier.weight(1f))
-                        }
-                    }
+                    AuthFeedback(state)
                     PrimaryButton(
                         if (register) "Создать аккаунт" else "Войти",
                         modifier = Modifier.testTag("auth-submit"), icon = DuoIcons.ArrowRight,
@@ -131,6 +136,53 @@ fun AuthScreen(
                     DuoText("Вместе легче сделать следующий шаг.", 12, c.fgMuted)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun EmailVerificationForm(
+    state: AuthUiState,
+    onCode: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onResend: () -> Unit,
+    onBack: () -> Unit,
+) {
+    val c = DuoTheme.colors
+    Column(Modifier.padding(top = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        DuoText("Подтверди почту", 30, c.fg, FontWeight.SemiBold, letterSpacing = -0.045)
+        DuoText("Введи шестизначный код из письма на ${state.email}.", 14, c.fgMuted, lineHeight = 1.6)
+        AuthField(
+            "Код подтверждения", "6 цифр", state.code, onCode, DuoIcons.Lock, "auth-code",
+            enabled = !state.loading, keyboardType = KeyboardType.Number, onDone = onSubmit,
+        )
+        AuthFeedback(state)
+        PrimaryButton(
+            "Подтвердить почту", Modifier.testTag("auth-submit"), icon = DuoIcons.ArrowRight,
+            enabled = !state.loading, loading = state.request == AuthRequest.Submit, onClick = onSubmit,
+        )
+        SecondaryButton(
+            if (state.request == AuthRequest.Resend) "Отправляем код…" else "Отправить код ещё раз",
+            enabled = !state.loading, onClick = onResend,
+        )
+        SecondaryButton("Ко входу", enabled = !state.loading, onClick = onBack)
+    }
+}
+
+@Composable
+private fun AuthFeedback(state: AuthUiState) {
+    val c = DuoTheme.colors
+    state.notice?.let { message ->
+        DuoText(message, 14, c.accentFg, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+    }
+    state.error?.let { message ->
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(c.danger.copy(alpha = 0.09f))
+                .semantics { error(message); liveRegion = LiveRegionMode.Polite }.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            DuoIcon(DuoIcons.AlertCircle, c.danger, 18.dp)
+            DuoText(message, 13, c.danger, modifier = Modifier.weight(1f))
         }
     }
 }
@@ -149,7 +201,7 @@ private fun AuthTab(text: String, active: Boolean, enabled: Boolean, modifier: M
 private fun AuthField(
     label: String, placeholder: String, value: String, onValue: (String) -> Unit, icon: ImageVector,
     tag: String, enabled: Boolean, keyboardType: KeyboardType = KeyboardType.Text,
-    password: Boolean = false, onDone: () -> Unit = {},
+    password: Boolean = false, onDone: (() -> Unit)? = null,
 ) {
     val c = DuoTheme.colors
     val focusManager = LocalFocusManager.current
@@ -161,8 +213,8 @@ private fun AuthField(
             value = value, onValueChange = onValue, enabled = enabled,
             modifier = Modifier.fillMaxWidth().testTag(tag).onFocusChanged { focused = it.isFocused }.semantics { contentDescription = label },
             textStyle = TextStyle(color = c.fg, fontSize = 16.sp), cursorBrush = SolidColor(c.accentFg), singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = if (password) KeyboardType.Password else keyboardType, imeAction = if (password) ImeAction.Done else ImeAction.Next, autoCorrectEnabled = false),
-            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }, onDone = { onDone() }),
+            keyboardOptions = KeyboardOptions(keyboardType = if (password) KeyboardType.Password else keyboardType, imeAction = if (onDone != null) ImeAction.Done else ImeAction.Next, autoCorrectEnabled = false),
+            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }, onDone = { onDone?.invoke() }),
             visualTransformation = if (password && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
             decorationBox = { innerTextField ->
                 Row(
@@ -216,8 +268,16 @@ private fun TogetherIllustration(modifier: Modifier = Modifier) {
 @Preview(name = "Вход · светлая", widthDp = 392, heightDp = 852)
 @Preview(name = "Вход · тёмная", widthDp = 392, heightDp = 852, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
-private fun AuthPreview() { DuoGoalTheme { AuthScreen(AuthUiState(), {}, {}, {}, {}, {}) } }
+private fun AuthPreview() { DuoGoalTheme { AuthScreen(AuthUiState(), {}, {}, {}, {}, {}, {}, {}) } }
 
 @Preview(name = "Регистрация · компактная", widthDp = 320, heightDp = 640, fontScale = 1.2f)
 @Composable
-private fun RegistrationPreview() { DuoGoalTheme { AuthScreen(AuthUiState(mode = AuthMode.Register), {}, {}, {}, {}, {}) } }
+private fun RegistrationPreview() { DuoGoalTheme { AuthScreen(AuthUiState(mode = AuthMode.Register), {}, {}, {}, {}, {}, {}, {}) } }
+
+@Preview(name = "Подтверждение почты · компактная", widthDp = 320, heightDp = 640, fontScale = 1.2f, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun VerificationPreview() {
+    DuoGoalTheme {
+        AuthScreen(AuthUiState(mode = AuthMode.VerifyEmail, email = "you@example.com"), {}, {}, {}, {}, {}, {}, {})
+    }
+}

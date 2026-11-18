@@ -13,6 +13,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import com.example.duogoal_android.ui.auth.AuthMode
+import com.example.duogoal_android.ui.auth.AuthRequest
 import com.example.duogoal_android.ui.auth.AuthUiState
 import com.example.duogoal_android.ui.screens.AuthScreen
 import com.example.duogoal_android.ui.theme.DuoGoalTheme
@@ -29,7 +30,7 @@ class AuthDesignTest {
         var submitted: AuthUiState? = null
         compose.setContent {
             DuoGoalTheme(darkTheme = false) {
-                AuthScreen(state, { state = state.copy(mode = it) }, { state = state.copy(username = it) }, { state = state.copy(email = it) }, { state = state.copy(password = it) }, { submitted = state })
+                AuthScreen(state, { state = state.copy(mode = it) }, { state = state.copy(username = it) }, { state = state.copy(email = it) }, { state = state.copy(password = it) }, { submitted = state }, {}, {})
             }
         }
         compose.onNodeWithTag("auth-username").assertDoesNotExist()
@@ -48,7 +49,7 @@ class AuthDesignTest {
 
     @Test fun loadingBlocksDuplicateRequests() {
         compose.setContent {
-            DuoGoalTheme(darkTheme = true) { AuthScreen(AuthUiState(loading = true), {}, {}, {}, {}, {}) }
+            DuoGoalTheme(darkTheme = true) { AuthScreen(AuthUiState(request = AuthRequest.Submit), {}, {}, {}, {}, {}, {}, {}) }
         }
         compose.onNodeWithTag("auth-submit").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithTag("auth-email").performScrollTo().assertIsNotEnabled()
@@ -56,10 +57,37 @@ class AuthDesignTest {
 
     @Test fun passwordVisibilityCanBeToggledInDarkTheme() {
         compose.setContent {
-            DuoGoalTheme(darkTheme = true) { AuthScreen(AuthUiState(password = "test-password"), {}, {}, {}, {}, {}) }
+            DuoGoalTheme(darkTheme = true) { AuthScreen(AuthUiState(password = "test-password"), {}, {}, {}, {}, {}, {}, {}) }
         }
         compose.onNodeWithContentDescription("Показать пароль", useUnmergedTree = true).performScrollTo().performClick()
         compose.onNodeWithContentDescription("Скрыть пароль", useUnmergedTree = true).assertIsDisplayed().performClick()
         compose.onNodeWithContentDescription("Показать пароль", useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    @Test fun emailVerificationShowsCodeFieldAndResendAction() {
+        var state by mutableStateOf(AuthUiState(mode = AuthMode.VerifyEmail, email = "test@example.com"))
+        var submittedCode: String? = null
+        compose.setContent {
+            DuoGoalTheme(darkTheme = false) {
+                AuthScreen(
+                    state = state,
+                    onMode = { state = state.copy(mode = it) },
+                    onUsername = {},
+                    onEmail = {},
+                    onPassword = {},
+                    onSubmit = { submittedCode = state.code },
+                    onCode = { state = state.copy(code = it) },
+                    onResend = { state = state.copy(request = AuthRequest.Resend) },
+                )
+            }
+        }
+        compose.onNodeWithText("test@example.com", substring = true).assertIsDisplayed()
+        compose.onNodeWithTag("auth-password").assertDoesNotExist()
+        compose.onNodeWithTag("auth-code").performScrollTo().performTextInput("012345")
+        compose.onNodeWithTag("auth-submit").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("012345", submittedCode) }
+        compose.onNodeWithText("Отправить код ещё раз").performScrollTo().performClick()
+        compose.onNodeWithText("Отправляем код…").assertIsNotEnabled()
+        compose.onNodeWithTag("auth-submit").assertIsNotEnabled()
     }
 }

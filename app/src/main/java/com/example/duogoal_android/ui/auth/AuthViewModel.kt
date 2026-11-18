@@ -18,20 +18,26 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-enum class AuthMode { Login, Register }
+enum class AuthMode { Login, Register, VerifyEmail }
+
+enum class AuthRequest { Submit, Resend }
 
 data class AuthUiState(
     val mode: AuthMode = AuthMode.Login,
     val username: String = "",
     val email: String = "",
     val password: String = "",
-    val loading: Boolean = false,
+    val code: String = "",
+    val request: AuthRequest? = null,
     val error: String? = null,
+    val notice: String? = null,
 ) {
+    val loading: Boolean get() = request != null
+
     override fun toString(): String = "AuthUiState(mode=$mode, loading=$loading)"
 }
 
-/** Форма переживает поворот через ViewModel; пароль не попадает в SavedStateHandle. */
+/** ViewModel сохраняет форму при повороте. Пароль и код хранятся только в памяти. */
 class AuthViewModel(
     private val repository: AuthRepository,
     private val savedState: SavedStateHandle,
@@ -57,16 +63,25 @@ class AuthViewModel(
         }
     }
 
-    fun setMode(mode: AuthMode) = edit { copy(mode = mode, error = null) }
+    fun setMode(mode: AuthMode) = edit {
+        if (this.mode == AuthMode.VerifyEmail) AuthUiState(mode = mode, email = email)
+        else copy(mode = mode, error = null, notice = null)
+    }
+
     fun updateUsername(value: String) = edit { copy(username = value, error = null) }
     fun updateEmail(value: String) = edit { copy(email = value, error = null) }
     fun updatePassword(value: String) = edit { copy(password = value, error = null) }
+    fun updateCode(value: String) = edit {
+        copy(code = value.filter { it in '0'..'9' }.take(CODE_LENGTH), error = null)
+    }
 
     fun submit() {
         val current = state.value
         if (current.loading) return
         val email = current.email.trim()
         val error = when {
+            current.mode == AuthMode.VerifyEmail ->
+                if (current.code.length == CODE_LENGTH) null else "Введите шестизначный код"
             !EMAIL.matches(email) -> "Введите корректный email"
             current.password.isBlank() -> "Введите пароль"
             current.mode == AuthMode.Register && current.username.trim().isBlank() -> "Введите имя пользователя"
@@ -76,24 +91,75 @@ class AuthViewModel(
             setState(current.copy(error = error))
             return
         }
-        setState(current.copy(loading = true, error = null))
-        requestJob = viewModelScope.launch {
-            try {
-                val result = if (current.mode == AuthMode.Login) repository.login(email, current.password)
-                else repository.register(current.username.trim(), email, current.password)
-                currentCoroutineContext().ensureActive()
-                setState(when (result) {
-                    is AuthResult.Success -> AuthUiState()
-                    is AuthResult.Failure -> if (result.kind == AuthFailureKind.Superseded) AuthUiState() else current.copy(
-                        mode = if (result.accountCreated) AuthMode.Login else current.mode,
-                        loading = false,
+        runRequest(current, AuthRequest.Submit) { current ->
+            when (current.mode) {
+                AuthMode.Login -> login(current, email)
+                AuthMode.Register -> when (val result = repository.register(current.username.trim(), email, current.password)) {
+                    is AuthResult.Success -> current.copy(mode = AuthMode.VerifyEmail, email = result.value)
+                    is AuthResult.Failure -> failed(current, result)
+                }
+                AuthMode.VerifyEmail -> confirmEmail(current)
+            }
+        }
+    }
+
+    fun resendCode() {
+        val current = state.value
+        if (current.loading || current.mode != AuthMode.VerifyEmail) return
+        runRequest(current, AuthRequest.Resend) { current ->
+            when (val result = repository.resendEmail(current.email)) {
+                is AuthResult.Success -> current.copy(code = "", notice = "Новый код отправлен.")
+                is AuthResult.Failure -> when (result.kind) {
+                    AuthFailureKind.RegistrationExpired -> AuthUiState(
+                        mode = AuthMode.Register,
+                        email = current.email,
+                        username = current.username,
                         error = result.message,
                     )
-                })
+                    else -> failed(current, result)
+                }
+            }
+        }
+    }
+
+    private suspend fun login(current: AuthUiState, email: String): AuthUiState =
+        when (val result = repository.login(email, current.password)) {
+            is AuthResult.Success -> AuthUiState()
+            is AuthResult.Failure -> if (result.kind == AuthFailureKind.VerificationRequired) {
+                current.copy(mode = AuthMode.VerifyEmail, email = email)
+            } else failed(current, result)
+        }
+
+    private suspend fun confirmEmail(current: AuthUiState): AuthUiState {
+        when (val result = repository.verifyEmail(current.email, current.code)) {
+            is AuthResult.Failure -> return failed(current, result)
+            is AuthResult.Success -> Unit
+        }
+        currentCoroutineContext().ensureActive()
+        val signIn = AuthUiState(email = current.email, notice = "Почта подтверждена. Войдите в аккаунт.")
+        if (current.password.isBlank()) return signIn
+        return when (val result = repository.login(current.email, current.password)) {
+            is AuthResult.Success -> AuthUiState()
+            is AuthResult.Failure -> failed(signIn, result)
+        }
+    }
+
+    private fun failed(current: AuthUiState, failure: AuthResult.Failure): AuthUiState =
+        if (failure.kind == AuthFailureKind.Superseded) AuthUiState() else current.copy(error = failure.message)
+
+    private fun runRequest(current: AuthUiState, request: AuthRequest, block: suspend (AuthUiState) -> AuthUiState) {
+        val ready = current.copy(error = null, notice = null)
+        setState(ready.copy(request = request))
+        requestJob = viewModelScope.launch {
+            try {
+                val result = block(ready)
+                currentCoroutineContext().ensureActive()
+                setState(result)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
-                setState(current.copy(loading = false, error = "Не удалось выполнить вход. Попробуйте ещё раз."))
+                currentCoroutineContext().ensureActive()
+                setState(ready.copy(error = "Не удалось выполнить запрос. Попробуйте ещё раз."))
             }
         }
     }
@@ -121,6 +187,7 @@ class AuthViewModel(
         const val MODE = "auth.mode"
         const val USERNAME = "auth.username"
         const val EMAIL_KEY = "auth.email"
+        const val CODE_LENGTH = 6
         val EMAIL = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
     }
 }

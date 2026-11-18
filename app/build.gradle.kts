@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -18,11 +20,23 @@ android {
         versionCode = 1
         versionName = "1.0"
         buildConfigField("String", "API_BASE_URL", "\"https://hlt.com/\"")
+        buildConfigField("String", "HLT_INGRESS_IPV4", "\"\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
+        debug {
+            val localConfig = Properties()
+            providers.fileContents(rootProject.layout.projectDirectory.file("local.properties")).asText.orNull
+                ?.reader()?.use { localConfig.load(it) }
+            val ingressIp = localConfig.getProperty("hlt.ingress.ipv4", "").trim()
+            require(ingressIp.isEmpty() || (ingressIp.split('.').size == 4 && ingressIp.split('.').all {
+                it.matches(Regex("0|[1-9][0-9]{0,2}")) && it.toInt() <= 255
+            })) { "hlt.ingress.ipv4 must contain an IPv4 address" }
+            buildConfigField("String", "HLT_INGRESS_IPV4", "\"$ingressIp\"")
+            buildConfigField("String", "API_BASE_URL", "\"http://hlt.com/\"")
+        }
         release {
             optimization {
                 enable = false
@@ -40,6 +54,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.okhttp)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.ui)

@@ -97,7 +97,7 @@ private fun GalleryContent(route: String, navigate: (String) -> Unit) {
         "Вход", "Регистрация" -> AuthScreen(
             AuthUiState(mode = if (route == "Регистрация") AuthMode.Register else AuthMode.Login, username = username, email = email, password = password),
             { navigate(if (it == AuthMode.Register) "Регистрация" else "Вход") },
-            { username = it }, { email = it }, { password = it }, {},
+            { username = it }, { email = it }, { password = it }, {}, {}, {},
         )
         "Цель" -> GoalActiveScreen(onBack = back, onOpenChat = { navigate("Чат") })
         "Лента" -> FeedScreen { navigate("Уведомления") }
