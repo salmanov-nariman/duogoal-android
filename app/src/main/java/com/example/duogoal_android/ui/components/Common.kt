@@ -172,6 +172,7 @@ fun SecondaryButton(
     modifier: Modifier = Modifier,
     height: Dp = 48.dp,
     icon: ImageVector? = null,
+    enabled: Boolean = true,
     onClick: () -> Unit = {},
 ) {
     val c = DuoTheme.colors
@@ -182,7 +183,7 @@ fun SecondaryButton(
             .clip(RoundedCornerShape(14.dp))
             .background(c.surfaceInput)
             .border(1.dp, c.border, RoundedCornerShape(14.dp))
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
@@ -191,7 +192,7 @@ fun SecondaryButton(
             DuoIcon(icon, c.fg, 16.dp)
             Box(Modifier.size(8.dp))
         }
-        DuoText(text, 15, c.fg, FontWeight.Medium)
+        DuoText(text, 15, if (enabled) c.fg else c.fgMuted, FontWeight.Medium)
     }
 }
 

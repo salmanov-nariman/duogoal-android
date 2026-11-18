@@ -23,6 +23,7 @@ class AuthRepository(
     private val generation = AtomicLong(0)
     private val stateLock = Any()
     private val storageMutex = Mutex()
+    private val signedOutRequestMutex = Mutex()
     private var restoreJob: Job? = null
     private var logoutJob: Job? = null
 
@@ -32,10 +33,37 @@ class AuthRepository(
         if (session.value is SessionState.RestoreFailed) restoreSession()
     }
 
-    suspend fun login(email: String, password: String): AuthResult = authenticate { api.login(email, password) }
+    suspend fun login(email: String, password: String): AuthResult<AuthSession> = signedOutRequestMutex.withLock request@{
+        val operation = beginSignedOutRequest() ?: return@request superseded()
+        val result = api.login(email, password)
+        if (operation != generation.get()) return@request superseded()
+        if (result !is AuthResult.Success) return@request result
+        if (result.value.accessToken.isBlank() || result.value.refreshToken.isBlank()) {
+            return@request AuthResult.Failure("Сервер вернул неполную сессию. Попробуйте позже.", AuthFailureKind.Protocol)
+        }
+        storageMutex.withLock {
+            if (operation != generation.get()) return@withLock superseded()
+            try {
+                val saved = StoredSession(result.value, UUID.randomUUID().toString())
+                store.write(saved)
+                if (!publish(operation, SessionState.SignedIn(saved.navigationKey))) return@withLock superseded()
+                result
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                AuthResult.Failure("Не удалось сохранить сессию на устройстве. Попробуйте войти ещё раз.", AuthFailureKind.Storage)
+            }
+        }
+    }
 
-    suspend fun register(username: String, email: String, password: String): AuthResult =
-        authenticate(isRegistration = true) { api.register(username, email, password) }
+    suspend fun register(username: String, email: String, password: String): AuthResult<String> =
+        requestWhileSignedOut { api.register(username, email, password) }
+
+    suspend fun verifyEmail(email: String, code: String): AuthResult<Unit> =
+        requestWhileSignedOut { api.verifyEmail(email, code) }
+
+    suspend fun resendEmail(email: String): AuthResult<Unit> =
+        requestWhileSignedOut { api.resendEmail(email) }
 
     /** Сначала закрываем приватный UI; успех выхода публикуется только после очистки диска. */
     fun logout() {
@@ -47,31 +75,15 @@ class AuthRepository(
         logoutJob = scope.launch { clearSession(operation) }
     }
 
-    private suspend fun authenticate(isRegistration: Boolean = false, request: suspend () -> AuthResult): AuthResult {
-        val operation = synchronized(stateLock) {
-            if (session.value !is SessionState.SignedOut) return superseded()
-            generation.incrementAndGet()
+    private fun beginSignedOutRequest(): Long? =
+        synchronized(stateLock) {
+            if (session.value is SessionState.SignedOut) generation.incrementAndGet() else null
         }
+
+    private suspend fun <T> requestWhileSignedOut(request: suspend () -> AuthResult<T>): AuthResult<T> = signedOutRequestMutex.withLock {
+        val operation = beginSignedOutRequest() ?: return@withLock superseded()
         val result = request()
-        if (operation != generation.get()) return superseded()
-        if (result !is AuthResult.Success) return result
-        if (result.session.accessToken.isBlank() || result.session.refreshToken.isBlank()) {
-            return AuthResult.Failure("Сервер вернул неполную сессию. Попробуйте позже.", AuthFailureKind.Protocol, accountCreated = isRegistration)
-        }
-        return storageMutex.withLock {
-            if (operation != generation.get()) return@withLock superseded()
-            try {
-                val saved = StoredSession(result.session, UUID.randomUUID().toString())
-                store.write(saved)
-                if (operation != generation.get()) return@withLock superseded()
-                if (!publish(operation, SessionState.SignedIn(saved.navigationKey))) return@withLock superseded()
-                result
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                AuthResult.Failure("Не удалось сохранить сессию на устройстве. Попробуйте войти ещё раз.", AuthFailureKind.Storage, accountCreated = isRegistration)
-            }
-        }
+        if (operation == generation.get()) result else superseded()
     }
 
     private fun restoreSession() {
@@ -89,11 +101,11 @@ class AuthRepository(
                 when (val result = api.refresh(saved.tokens.refreshToken)) {
                     is AuthResult.Success -> storageMutex.withLock {
                         if (operation != generation.get()) return@withLock
-                        if (result.session.accessToken.isBlank() || result.session.refreshToken.isBlank()) {
+                        if (result.value.accessToken.isBlank() || result.value.refreshToken.isBlank()) {
                             publish(operation, SessionState.RestoreFailed("Сервер вернул неполную сессию. Повторите попытку позже."))
                             return@withLock
                         }
-                        store.write(saved.copy(tokens = result.session))
+                        store.write(saved.copy(tokens = result.value))
                         publish(operation, SessionState.SignedIn(saved.navigationKey))
                     }
                     is AuthResult.Failure -> {

@@ -144,7 +144,7 @@ class AuthRepositoryTest {
     }
 
     @Test fun lateLoginCannotResurrectLoggedOutSession() = runTest {
-        val response = CompletableDeferred<AuthResult>()
+        val response = CompletableDeferred<AuthResult<AuthSession>>()
         val api = FakeAuthApi().apply { onLogin = { response.await() } }
         val store = FakeSessionStore()
         val repository = AuthRepository(api, store, this)
@@ -162,7 +162,7 @@ class AuthRepositoryTest {
     }
 
     @Test fun lateRefreshCannotResurrectLoggedOutSessionEvenIfApiIgnoresCancellation() = runTest {
-        val response = CompletableDeferred<AuthResult>()
+        val response = CompletableDeferred<AuthResult<AuthSession>>()
         val api = FakeAuthApi().apply { onRefresh = { withContext(NonCancellable) { response.await() } } }
         val store = FakeSessionStore(existingSession())
         val repository = AuthRepository(api, store, this)
@@ -206,7 +206,7 @@ class AuthRepositoryTest {
     }
 
     @Test fun lateFailureAfterLogoutIsDiscardedToo() = runTest {
-        val response = CompletableDeferred<AuthResult>()
+        val response = CompletableDeferred<AuthResult<AuthSession>>()
         val api = FakeAuthApi().apply { onLogin = { response.await() } }
         val repository = AuthRepository(api, FakeSessionStore(), this)
         advanceUntilIdle()
@@ -229,12 +229,18 @@ class AuthRepositoryTest {
         assertFalse(existingSession().toString().contains("old-access"))
     }
 
-    @Test fun registrationPersistenceFailureDoesNotSuggestCreatingAccountAgain() = runTest {
-        val store = FakeSessionStore().apply { writeError = IOException("disk full") }
-        val repository = AuthRepository(FakeAuthApi(), store, this)
+    @Test fun emailOperationsNeverCreateSession() = runTest {
+        val email = "user@example.com"
+        val store = FakeSessionStore()
+        val api = FakeAuthApi()
+        val repository = AuthRepository(api, store, this)
         advanceUntilIdle()
-        val result = repository.register("testuser", "user@example.com", "test") as AuthResult.Failure
-        assertTrue(result.accountCreated)
-        assertTrue(repository.session.value is SessionState.SignedOut)
+
+        assertEquals(AuthResult.Success(email), repository.register("testuser", email, "test"))
+        assertEquals(AuthResult.Success(Unit), repository.resendEmail(email))
+        assertEquals(AuthResult.Success(Unit), repository.verifyEmail(email, "012345"))
+        assertEquals(SessionState.SignedOut(), repository.session.value)
+        assertEquals(0, api.loginCalls)
+        assertEquals(0, store.writes)
     }
 }

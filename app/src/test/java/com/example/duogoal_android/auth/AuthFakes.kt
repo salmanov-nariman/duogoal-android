@@ -10,21 +10,37 @@ internal class FakeAuthApi : AuthApi {
     var loginCalls = 0
     var registerCalls = 0
     var refreshCalls = 0
+    var verifyCalls = 0
+    var resendCalls = 0
     var lastEmail: String? = null
-    var onLogin: suspend () -> AuthResult = { AuthResult.Success(AuthSession("new-access", "new-refresh")) }
-    var onRegister: suspend () -> AuthResult = { onLogin() }
-    var onRefresh: suspend () -> AuthResult = { AuthResult.Success(AuthSession("rotated-access", "rotated-refresh")) }
+    var lastCode: String? = null
+    var onLogin: suspend () -> AuthResult<AuthSession> = { AuthResult.Success(AuthSession("new-access", "new-refresh")) }
+    var onRegister: suspend (String) -> AuthResult<String> = { AuthResult.Success(it) }
+    var onVerify: suspend () -> AuthResult<Unit> = { AuthResult.Success(Unit) }
+    var onResend: suspend () -> AuthResult<Unit> = { AuthResult.Success(Unit) }
+    var onRefresh: suspend () -> AuthResult<AuthSession> = { AuthResult.Success(AuthSession("rotated-access", "rotated-refresh")) }
 
-    override suspend fun login(email: String, password: String): AuthResult {
+    override suspend fun login(email: String, password: String): AuthResult<AuthSession> {
         loginCalls++
         lastEmail = email
         return onLogin()
     }
-    override suspend fun register(username: String, email: String, password: String): AuthResult {
+    override suspend fun register(username: String, email: String, password: String): AuthResult<String> {
         registerCalls++
-        return onRegister()
+        return onRegister(email)
     }
-    override suspend fun refresh(refreshToken: String): AuthResult {
+    override suspend fun verifyEmail(email: String, code: String): AuthResult<Unit> {
+        verifyCalls++
+        lastEmail = email
+        lastCode = code
+        return onVerify()
+    }
+    override suspend fun resendEmail(email: String): AuthResult<Unit> {
+        resendCalls++
+        lastEmail = email
+        return onResend()
+    }
+    override suspend fun refresh(refreshToken: String): AuthResult<AuthSession> {
         refreshCalls++
         return onRefresh()
     }

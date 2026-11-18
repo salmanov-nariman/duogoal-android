@@ -50,17 +50,21 @@ fun DuoGoalApp() {
 
     SessionGate(session, repository::retryRestoration, repository::logout) { message ->
         var notice by rememberSaveable(message) { mutableStateOf(message) }
-        BackHandler(enabled = auth.mode == AuthMode.Register && !auth.loading) {
-            notice = null
-            viewModel.setMode(AuthMode.Login)
+        BackHandler(enabled = auth.mode != AuthMode.Login) {
+            if (!auth.loading) {
+                notice = null
+                viewModel.setMode(AuthMode.Login)
+            }
         }
         AuthScreen(
-            state = auth.copy(error = auth.error ?: notice),
+            state = auth.copy(error = auth.error ?: if (auth.notice == null) notice else null),
             onMode = { notice = null; viewModel.setMode(it) },
             onUsername = { notice = null; viewModel.updateUsername(it) },
             onEmail = { notice = null; viewModel.updateEmail(it) },
             onPassword = { notice = null; viewModel.updatePassword(it) },
             onSubmit = { notice = null; viewModel.submit() },
+            onCode = viewModel::updateCode,
+            onResend = viewModel::resendCode,
         )
     }
 }

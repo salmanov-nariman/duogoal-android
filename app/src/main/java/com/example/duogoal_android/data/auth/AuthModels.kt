@@ -9,15 +9,16 @@ data class StoredSession(val tokens: AuthSession, val navigationKey: String) {
     override fun toString(): String = "StoredSession(<redacted>)"
 }
 
-enum class AuthFailureKind { Rejected, Unavailable, Protocol, Storage, Superseded }
+enum class AuthFailureKind {
+    Rejected, Unavailable, Protocol, Storage, Superseded, VerificationRequired, RegistrationExpired,
+}
 
-sealed interface AuthResult {
-    data class Success(val session: AuthSession) : AuthResult
+sealed interface AuthResult<out T> {
+    data class Success<T>(val value: T) : AuthResult<T>
     data class Failure(
         val message: String,
         val kind: AuthFailureKind,
-        val accountCreated: Boolean = false,
-    ) : AuthResult
+    ) : AuthResult<Nothing>
 }
 
 sealed interface SessionState {
@@ -30,9 +31,11 @@ sealed interface SessionState {
 }
 
 interface AuthApi {
-    suspend fun login(email: String, password: String): AuthResult
-    suspend fun register(username: String, email: String, password: String): AuthResult
-    suspend fun refresh(refreshToken: String): AuthResult
+    suspend fun login(email: String, password: String): AuthResult<AuthSession>
+    suspend fun register(username: String, email: String, password: String): AuthResult<String>
+    suspend fun verifyEmail(email: String, code: String): AuthResult<Unit>
+    suspend fun resendEmail(email: String): AuthResult<Unit>
+    suspend fun refresh(refreshToken: String): AuthResult<AuthSession>
 }
 
 interface SessionStore {
